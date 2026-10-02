@@ -25,7 +25,7 @@ typedef struct {
     double yfactor;
     int bounceRate;
     int xdirection;
-    int ydirection ;
+    int ydirection;
 } BallParams;
 
 static void init_paddle_params(PaddleParams* pr){
@@ -41,7 +41,7 @@ static void init_ball_params(BallParams* pr){
     pr->current_y = pr->height/2;
     pr->current_x = pr->width/2;
     pr->yfactor = 0;
-    pr->bounceRate = 1;
+    pr->bounceRate = 4;
     pr->xdirection = -1;
     pr->ydirection = 1;
 }
