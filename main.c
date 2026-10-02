@@ -12,6 +12,8 @@
 #define COLOR_SHADOW_BLACK  3
 #define COLOR_TEXT_BLUE     4
 #define COLOR_BG_RED        5
+#define COLOR_BORDER_DARK   6
+#define COLOR_BORDER_LIGHT  7
 
 typedef struct {
     WINDOW* mainwin;
@@ -47,6 +49,7 @@ static void init_ball_params(BallParams* pr){
     pr->ydirection = 1;
 }
 
+// Now it's time to get funky.
 WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
 
     WINDOW* win = newwin(height, width, starty, startx);
@@ -55,7 +58,22 @@ WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
     int y, x;
     getmaxyx(win, y, x);
 
-    box(win, 0, 0);
+    // Custom 3D box thingy idk
+    wattron(win, COLOR_PAIR(COLOR_BORDER_LIGHT) | A_BOLD);
+    mvwaddch(win, 0, 0, ACS_ULCORNER);
+    mvwaddch(win, y - 1, 0, ACS_LLCORNER);
+    mvwhline(win, 0, 1, ACS_HLINE, x-2);
+    mvwvline(win, 1, 0, ACS_VLINE, y-2);
+    wattroff(win, COLOR_PAIR(COLOR_BORDER_LIGHT | A_BOLD));
+
+    wattrset(win, A_NORMAL);
+
+    wattron(win, COLOR_PAIR(COLOR_BORDER_DARK) | A_BOLD);
+    mvwaddch(win, 0, x-1, ACS_URCORNER);
+    mvwaddch(win, y - 1, x-1, ACS_LRCORNER);
+    mvwhline(win, y-1, 1, ACS_HLINE, x-2);
+    mvwvline(win, 1, x-1, ACS_VLINE, y-2);
+    wattroff(win, COLOR_PAIR(COLOR_BORDER_DARK) | A_BOLD);
 
     attron(COLOR_PAIR(3));
     for (int i = 1; i < height+1; ++i) {
@@ -66,7 +84,7 @@ WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
     }
     attroff(COLOR_PAIR(3));
 
-    mvwprintw(win, 0, (x - strlen(label))/2, "%s", label);
+    mvwprintw(win, 0, (x - strlen(label))/2, " %s ", label);
 
     wrefresh(win);
     return win;
@@ -145,7 +163,7 @@ static void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp){
         b->xdirection *= -1;
     }
 
-    mvwprintw(b->mainwin, b->current_y, b->current_x, "o");
+    mvwprintw(b->mainwin, b->current_y, b->current_x, "O");
 
     wrefresh(b->mainwin);
 }
@@ -170,11 +188,13 @@ int main() {
     }
     start_color();
 
-    init_pair(COLOR_BG_BLUE,       COLOR_WHITE, COLOR_BLUE);
-    init_pair(COLOR_DIALOG_GRAY,   COLOR_BLACK, COLOR_WHITE);
-    init_pair(COLOR_SHADOW_BLACK,  COLOR_BLACK, COLOR_BLACK);
-    init_pair(COLOR_TEXT_BLUE,     COLOR_BLUE,  COLOR_WHITE);
-    init_pair(COLOR_BG_RED,        COLOR_WHITE, COLOR_RED);
+    init_pair(COLOR_BG_BLUE,        COLOR_WHITE, COLOR_BLUE);
+    init_pair(COLOR_DIALOG_GRAY,    COLOR_BLACK, COLOR_WHITE);
+    init_pair(COLOR_SHADOW_BLACK,   COLOR_BLACK, COLOR_BLACK);
+    init_pair(COLOR_TEXT_BLUE,      COLOR_BLUE,  COLOR_WHITE);
+    init_pair(COLOR_BG_RED,         COLOR_WHITE, COLOR_RED);
+    init_pair(COLOR_BORDER_DARK,    COLOR_BLACK, COLOR_WHITE);
+    init_pair(COLOR_BORDER_LIGHT,   COLOR_WHITE, COLOR_WHITE);
 
     bkgd(COLOR_PAIR(COLOR_BG_BLUE));
     mvaddstr(1, 1, "Pong (Beta)");
