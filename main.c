@@ -42,7 +42,7 @@ WINDOW* newWindow(int height, int width, int starty, int startx){
     }
     attroff(COLOR_PAIR(3));
 
-    mvwprintw(mainWin, 0, (x/2), "Nice");
+    mvwprintw(mainWin, 0, (x/2), "Niiiiiiice dude");
 
     wrefresh(mainWin);
     return mainWin;
@@ -55,22 +55,30 @@ static void spawnPaddle(Props* win, bool flag){
 
     int length = 4;
 
+    //if (win->current_y == 0) {
+    //    win->current_y++;
+    //    return;
+    //}
+    //if (win->current_y == win->height - length) {
+    //    win->current_y--;
+    //    return;
+    //}
+
     if (win->current_y == 0) {
-        win->current_y++;
-        return;
-    }
-    if (win->current_y == win->height) {
-        win->current_y--;
         return;
     }
 
     if (flag == TRUE) {
         for (int i = 0; i < length; ++i) {
             mvwprintw(win->mainwin, win->current_y+i, 1, "[]");
+            if(win->current_y != win->height)
+                mvwprintw(win->mainwin, win->current_y+i+1, 1, "  ");
         }
     } else {
         for (int i = 0; i < length; ++i) {
-            mvwprintw(win->mainwin, win->current_y+i, 1, "  ");
+            mvwprintw(win->mainwin, win->current_y+i, 1, "[]");
+            if(win->current_y != 1)
+                mvwprintw(win->mainwin, win->current_y-1, 1, "  ");
         }
     }
 
@@ -120,17 +128,24 @@ int main() {
 
     spawnPaddle(&win, TRUE);
     while ((ch = getch()) != KEY_F(1)) {
-
+        if (win.current_y == 0) {
+            win.current_y++;
+            spawnPaddle(&win, FALSE);
+            continue;
+        }
+        if (win.current_y == win.height - 5) {
+            win.current_y--;
+            spawnPaddle(&win, TRUE);
+            continue;
+        }
         switch (ch) {
             case KEY_UP:
-                spawnPaddle(&win, FALSE);
                 --win.current_y;
                 spawnPaddle(&win, TRUE);
                 break;
             case KEY_DOWN:
-                spawnPaddle(&win, FALSE);
                 ++win.current_y;
-                spawnPaddle(&win, TRUE);
+                spawnPaddle(&win, FALSE);
                 break;
         }
 
