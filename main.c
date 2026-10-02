@@ -1,4 +1,6 @@
 #include <curses.h>
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <ncurses.h>
@@ -10,28 +12,51 @@
 #define COLOR_TEXT_BLUE     4
 #define COLOR_BG_RED        5
 
+
+
 typedef struct {
     WINDOW* mainwin;
     int current_y, current_x;
     int height, width;
-} Props;
+} PaddleParams;
 
-static void init_props(Props* pr){
+typedef struct {
+    WINDOW* mainwin;
+    int current_y, current_x;
+    int height, width;
+    double yfactor;
+    int bounceRate;
+    int xdirection;
+    int ydirection ;
+} BallParams;
+
+static void init_paddle_params(PaddleParams* pr){
     pr->height = getmaxy(pr->mainwin);
     pr->width = getmaxx(pr->mainwin);
     pr->current_y = pr->height/2;
     pr->current_x = pr->width/2;
 }
 
-WINDOW* newWindow(int height, int width, int starty, int startx){
+static void init_ball_params(BallParams* pr){
+    pr->height = getmaxy(pr->mainwin);
+    pr->width = getmaxx(pr->mainwin);
+    pr->current_y = pr->height/2;
+    pr->current_x = pr->width/2;
+    pr->yfactor = 0;
+    pr->bounceRate = 1;
+    pr->xdirection = -1;
+    pr->ydirection = 1;
+}
 
-    WINDOW* mainWin = newwin(height, width, starty, startx);
-    wbkgd(mainWin, COLOR_PAIR(COLOR_DIALOG_GRAY));
+WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
+
+    WINDOW* win = newwin(height, width, starty, startx);
+    wbkgd(win, COLOR_PAIR(COLOR_DIALOG_GRAY));
 
     int y, x;
-    getmaxyx(mainWin, y, x);
+    getmaxyx(win, y, x);
 
-    box(mainWin, 0, 0);
+    box(win, 0, 0);
 
     attron(COLOR_PAIR(3));
     for (int i = 1; i < height+1; ++i) {
@@ -42,18 +67,23 @@ WINDOW* newWindow(int height, int width, int starty, int startx){
     }
     attroff(COLOR_PAIR(3));
 
-    mvwprintw(mainWin, 0, (x/2), "Niiiiiiice dude");
+    mvwprintw(win, 0, (x/2), "%s", label);
 
-    wrefresh(mainWin);
-    return mainWin;
+    wrefresh(win);
+    return win;
 }
 
-static void spawnPaddle(Props* win, bool flag){
-
-    int y, x;
-    y = getmaxy(win->mainwin);
-
+static void spawnPaddle(PaddleParams* p, bool flag, bool right){
     int length = 4;
+    int pos;
+
+    if (right) {
+        pos = p->width-3;
+        p->current_x = pos - 1;
+    } else {
+        pos = 1;
+        p->current_x = 3;
+    }
 
     //if (win->current_y == 0) {
     //    win->current_y++;
@@ -64,39 +94,74 @@ static void spawnPaddle(Props* win, bool flag){
     //    return;
     //}
 
-    if (win->current_y == 0) {
-        return;
-    }
-
     if (flag == TRUE) {
         for (int i = 0; i < length; ++i) {
-            mvwprintw(win->mainwin, win->current_y+i, 1, "[]");
-            if(win->current_y != win->height)
-                mvwprintw(win->mainwin, win->current_y+i+1, 1, "  ");
+            mvwprintw(p->mainwin, p->current_y+i, pos, "[]");
+            //if(win->current_y != win->height)
+            mvwprintw(p->mainwin, p->current_y+i+1, pos, "  ");
         }
     } else {
         for (int i = 0; i < length; ++i) {
-            mvwprintw(win->mainwin, win->current_y+i, 1, "[]");
-            if(win->current_y != 1)
-                mvwprintw(win->mainwin, win->current_y-1, 1, "  ");
+            mvwprintw(p->mainwin, p->current_y+i, pos, "[]");
+            //if(win->current_y != 1)
+            mvwprintw(p->mainwin, p->current_y-1, pos, "  ");
         }
     }
 
-    wrefresh(win->mainwin);
+    wrefresh(p->mainwin);
+}
+
+
+static void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp){
+
+    mvwprintw(b->mainwin, b->current_y, b->current_x, " ");
+
+    b->yfactor += (double)b->ydirection / b->bounceRate;
+    int factor = (int)trunc(b->yfactor);
+    if (factor != 0) {
+        b->current_y += factor;
+        b->yfactor -= (double)factor;
+    }
+
+    b->current_x += b->xdirection;
+
+    if (b->current_y >= b->height-1) {
+        b->current_y = b->height - 2;
+        b->yfactor = 0;
+        b->ydirection = -1;
+        b->current_y += -1;
+    } else if (b->current_y <= 0) {
+        b->current_y = 1;
+        b->yfactor = 0;
+        b->ydirection = 1;
+        b->current_y += 1;
+    }
+    if (b->xdirection == -1 &&
+            (b->current_y >= lp->current_y && b->current_y < lp->current_y + 4)
+            && b->current_x == lp->current_x){
+        b->xdirection *= -1;
+    } else if (b->xdirection == 1 &&
+            (b->current_y >= rp->current_y && b->current_y < rp->current_y + 4)
+            && b->current_x == rp->current_x){
+        b->xdirection *= -1;
+    }
+
+    mvwprintw(b->mainwin, b->current_y, b->current_x, "o");
+
+    wrefresh(b->mainwin);
 }
 
 int main() {
     setlocale(LC_ALL, "en_US.UTF-8");
 
-    Props win;
-    int row, col;
-
     initscr();
     cbreak();
     noecho();
-    //nodelay(stdscr, TRUE);
+    nodelay(stdscr, TRUE);
     keypad(stdscr, TRUE);
     curs_set(0); 
+
+    int row, col;
     getmaxyx(stdscr, row, col);
 
     if (!has_colors()) {
@@ -110,47 +175,71 @@ int main() {
     init_pair(COLOR_DIALOG_GRAY,   COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_SHADOW_BLACK,  COLOR_BLACK, COLOR_BLACK);
     init_pair(COLOR_TEXT_BLUE,     COLOR_BLUE,  COLOR_WHITE);
-    init_pair(COLOR_BG_RED,     COLOR_WHITE,  COLOR_RED);
+    init_pair(COLOR_BG_RED,        COLOR_WHITE, COLOR_RED);
 
-    bkgd(COLOR_PAIR(COLOR_BG_RED));
+    bkgd(COLOR_PAIR(COLOR_BG_BLUE));
     mvaddstr(1, 1, "Pong (Beta)");
     refresh();
 
-    int height = 20;
-    int width = 70;
-    int center_y = (row-height) / 2;
-    int center_x = (col-width) / 2;
+    int main_height = 20;
+    int main_width = 70;
+    int main_center_y = (row-main_height) / 2;
+    int main_center_x = (col-main_width) / 2;
 
-    win.mainwin = newWindow(height, width, center_y, center_x);
-    init_props(&win);
+    PaddleParams paddle1;
+    PaddleParams paddle2;
+    WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "Main Window");
+    refresh();
+    WINDOW* p1score = newWindow(10, 20, row-12, (col-20)/2, "Player 1 Score");
+    paddle1.mainwin = mainwin;
+    paddle2.mainwin = mainwin;
+    init_paddle_params(&paddle1);
+    init_paddle_params(&paddle2);
+
+    BallParams ball;
+    ball.mainwin = mainwin;
+    init_ball_params(&ball);
 
     int ch;
-
-    spawnPaddle(&win, TRUE);
+    spawnPaddle(&paddle1, TRUE, FALSE);
+    spawnPaddle(&paddle2, TRUE, TRUE);
     while ((ch = getch()) != KEY_F(1)) {
-        if (win.current_y == 0) {
-            win.current_y++;
-            spawnPaddle(&win, FALSE);
-            continue;
+        flushinp(); // Cuz the paddles keep LAGGING, DAMN!!!!!!!!!!!!!!!!!
+        // Collision check (paddles)
+        if (paddle1.current_y == 1) {
+            if (ch == 'W' || ch == 'w') continue; 
+        } else if (paddle1.current_y == paddle1.height - 5) {
+            if (ch == 'S' || ch == 's') continue;
         }
-        if (win.current_y == win.height - 5) {
-            win.current_y--;
-            spawnPaddle(&win, TRUE);
-            continue;
+        if (paddle2.current_y == 1) {
+            if (ch == KEY_UP) continue;
+        } else if (paddle2.current_y == paddle2.height - 5) {
+            if (ch == KEY_DOWN) continue;
         }
         switch (ch) {
+            case 'W':
+            case 'w':
+                --paddle1.current_y;
+                spawnPaddle(&paddle1, TRUE, FALSE);
+                break;
+            case 'S':
+            case 's':
+                ++paddle1.current_y;
+                spawnPaddle(&paddle1, FALSE, FALSE);
+                break;
             case KEY_UP:
-                --win.current_y;
-                spawnPaddle(&win, TRUE);
+                --paddle2.current_y;
+                spawnPaddle(&paddle2, TRUE, TRUE);
                 break;
             case KEY_DOWN:
-                ++win.current_y;
-                spawnPaddle(&win, FALSE);
+                ++paddle2.current_y;
+                spawnPaddle(&paddle2, false, TRUE);
                 break;
         }
-
+        spawnBall(&ball, &paddle1, &paddle2);
+        usleep(50000);
+        wrefresh(mainwin);
     }
-
     endwin();
     return EXIT_SUCCESS;
 }
