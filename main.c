@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <ncurses.h>
 #include <locale.h>
@@ -65,7 +66,7 @@ WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
     }
     attroff(COLOR_PAIR(3));
 
-    mvwprintw(win, 0, (x/2), "%s", label);
+    mvwprintw(win, 0, (x - strlen(label))/2, "%s", label);
 
     wrefresh(win);
     return win;
@@ -186,7 +187,7 @@ int main() {
 
     PaddleParams paddle1;
     PaddleParams paddle2;
-    WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "Main Window");
+    WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "Pong!");
     refresh();
     WINDOW* p1score = newWindow(10, 20, row-12, (col-20)/2, "Player 1 Score");
     paddle1.mainwin = mainwin;
