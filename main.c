@@ -11,10 +11,17 @@
 #define COLOR_BG_RED        5
 
 typedef struct {
-    WINDOW* win;
-    int startx, starty;
+    WINDOW* mainwin;
+    int current_y, current_x;
     int height, width;
 } Props;
+
+static void init_props(Props* pr){
+    pr->height = getmaxy(pr->mainwin);
+    pr->width = getmaxx(pr->mainwin);
+    pr->current_y = pr->height/2;
+    pr->current_x = pr->width/2;
+}
 
 WINDOW* newWindow(int height, int width, int starty, int startx){
 
@@ -41,36 +48,39 @@ WINDOW* newWindow(int height, int width, int starty, int startx){
     return mainWin;
 }
 
-static void spawnPaddle(WINDOW* win, Props* prop, bool flag){
+static void spawnPaddle(Props* win, bool flag){
 
     int y, x;
-    y = getmaxy(win);
-
-    if (prop->height == 0) {
-        prop->height -= 1; 
-        return;
-    }
-    prop->starty = y / 2;
+    y = getmaxy(win->mainwin);
 
     int length = 4;
 
+    if (win->current_y == 0) {
+        win->current_y++;
+        return;
+    }
+    if (win->current_y == win->height) {
+        win->current_y--;
+        return;
+    }
+
     if (flag == TRUE) {
         for (int i = 0; i < length; ++i) {
-            mvwprintw(win, prop->height+i, 1, "[]");
+            mvwprintw(win->mainwin, win->current_y+i, 1, "[]");
         }
     } else {
         for (int i = 0; i < length; ++i) {
-            mvwprintw(win, prop->height+i, 1, "  ");
+            mvwprintw(win->mainwin, win->current_y+i, 1, "  ");
         }
     }
 
-    wrefresh(win);
+    wrefresh(win->mainwin);
 }
 
 int main() {
     setlocale(LC_ALL, "en_US.UTF-8");
 
-    Props paddleprops;
+    Props win;
     int row, col;
 
     initscr();
@@ -103,24 +113,24 @@ int main() {
     int center_y = (row-height) / 2;
     int center_x = (col-width) / 2;
 
-    WINDOW* gamewin = newWindow(height, width, center_y, center_x);
+    win.mainwin = newWindow(height, width, center_y, center_x);
+    init_props(&win);
 
     int ch;
 
-    paddleprops.height = -1;
-    spawnPaddle(gamewin, &paddleprops, TRUE);
+    spawnPaddle(&win, TRUE);
     while ((ch = getch()) != KEY_F(1)) {
 
         switch (ch) {
             case KEY_UP:
-                spawnPaddle(gamewin, &paddleprops, FALSE);
-                --paddleprops.height;
-                spawnPaddle(gamewin, &paddleprops, TRUE);
+                spawnPaddle(&win, FALSE);
+                --win.current_y;
+                spawnPaddle(&win, TRUE);
                 break;
             case KEY_DOWN:
-                spawnPaddle(gamewin, &paddleprops, FALSE);
-                ++paddleprops.height;
-                spawnPaddle(gamewin, &paddleprops, TRUE);
+                spawnPaddle(&win, FALSE);
+                ++win.current_y;
+                spawnPaddle(&win, TRUE);
                 break;
         }
 
