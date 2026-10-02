@@ -12,8 +12,6 @@
 #define COLOR_TEXT_BLUE     4
 #define COLOR_BG_RED        5
 
-
-
 typedef struct {
     WINDOW* mainwin;
     int current_y, current_x;
