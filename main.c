@@ -1,6 +1,7 @@
 #include <curses.h>
 #include <ncurses.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -16,6 +17,9 @@
 #define COLOR_BG_RED        5
 #define COLOR_BORDER_DARK   6
 #define COLOR_BORDER_LIGHT  7
+
+int match_ongoing = 1;
+int winner = 0;
 
 typedef struct {
     WINDOW* mainwin;
@@ -193,7 +197,7 @@ static void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp, ScorePa
     }
 
     if (b->current_x == b->width-2 && b->xdirection == 1) {
-        mvwprintw(stdscr, LINES-2, 0, "Player 1 Scored");
+        mvwprintw(stdscr, LINES-1, 0, "Player 1 Scored");
         b->current_x = b->width/2;
         b->current_y = b->height/2;
         b->xdirection *= -1;
@@ -201,7 +205,7 @@ static void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp, ScorePa
         s->p1score++;
         checkScore(s);
     } else if (b->current_x == 1 && b->xdirection == -1) {
-        mvwprintw(stdscr, LINES-2, 0, "Player 2 Scored");
+        mvwprintw(stdscr, LINES-1, 0, "Player 2 Scored");
         b->current_x = b->width/2;
         b->current_y = b->height/2;
         b->xdirection *= -1;
@@ -216,26 +220,26 @@ static void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp, ScorePa
 }
 
 static void checkScore(ScoreParams* s){
-    int mini_height = 10;
+    int mini_height = 5;
     int mini_width = 20;
     WINDOW* p1 = newWindow(mini_height,
                                 mini_width,
-                                (LINES/2) + 10,
+                                (LINES/2) + 17,
                                 ((COLS / 2) - mini_width) - 1, 
                                 "Player 1");
     wrefresh(p1);
     refresh();
     WINDOW* p2 = newWindow(mini_height,
                                 mini_width,
-                                (LINES/2) + 10,
+                                (LINES/2) + 17,
                                 (COLS / 2) + 1, 
                                 "Player 2");
     wrefresh(p2);
     refresh();
 
-    int y1, y2, x1, x2;
-    getmaxyx(p1, y1, x1);
-    getmaxyx(p2, y2, x2);
+    int y1, y2;
+    y1 = getmaxy(p1);
+    y2 = getmaxy(p2);
 
     attron(COLOR_PAIR(COLOR_TEXT_BLUE));
     mvwprintw(p1, y1/2, 1, "Score:   %d", s->p1score);
@@ -243,6 +247,63 @@ static void checkScore(ScoreParams* s){
     attroff(COLOR_PAIR(COLOR_TEXT_BLUE));
     wrefresh(p1);
     wrefresh(p2);
+
+    if (s->p1score == 10) {
+        winner = 1;
+        match_ongoing = 0;
+    } else if (s->p2score == 10) {
+        winner = 2;
+        match_ongoing = 0;
+    }
+    delwin(p1);
+    delwin(p2);
+}
+
+void winCondition(ScoreParams* s){
+    flushinp();
+    WINDOW* finalWin = newWindow(20, 40, (LINES - 20) / 2, (COLS - 40) / 2, "Game Over");
+
+    int y, x;
+    getmaxyx(finalWin, y, x);
+
+    int midy = (y / 2);
+    int midx = (x / 2);
+    mvwprintw(finalWin, midy-5, midx - 6, "PLAYER %d WINS!", winner);
+    mvwprintw(finalWin, midy-4, midx - 6, "Well Played!");
+    mvwprintw(finalWin, midy, 5, "Player 1");
+    mvwprintw(finalWin, midy+1, 5, "Points: %d", s->p1score);
+    mvwprintw(finalWin, midy, midx + 5, "Player 2");
+    mvwprintw(finalWin, midy+1, midx + 5, "Points: %d", s->p2score);
+    mvwprintw(finalWin, midy+6, midx - 11, "Thank you for playing!");
+    mvwprintw(finalWin, y-2, midx - 10, "Press Enter to quit.");
+    mvwprintw(stdscr, 1, 1, "AUIB Open Source Club");
+    wrefresh(finalWin);
+    delwin(finalWin);
+}
+
+void printASCII(){
+    WINDOW* asciiWin = newwin(5, COLS, 4, (COLS-44)/2);
+    wbkgd(asciiWin, COLOR_PAIR(COLOR_BG_BLUE));
+    wrefresh(asciiWin);
+    FILE* ascii;
+    ssize_t read;
+    char* line = NULL;
+    size_t len;
+
+    ascii = fopen("./ascii.txt", "r");
+    if (!ascii) {
+        printf("ASCII file missing or failed to open.\n");
+        return;
+    }
+    while ((read = getline(&line, &len, ascii)) != -1){
+        move(10, COLS/2);
+        wprintw(asciiWin,"%s", line);
+        refresh();
+        wrefresh(asciiWin);
+    }
+    refresh();
+    wrefresh(stdscr);
+    fclose(ascii);
 }
 
 int main() {
@@ -264,6 +325,7 @@ int main() {
     int row, col;
     getmaxyx(stdscr, row, col);
 
+
     if (!has_colors()) {
         endwin();
         printf("Terminal doesn't support colors\n");
@@ -280,23 +342,19 @@ int main() {
     init_pair(COLOR_BORDER_LIGHT,   COLOR_WHITE, COLOR_WHITE);
 
     bkgd(COLOR_PAIR(COLOR_BG_BLUE));
-    mvaddstr(1, 1, "Pong (Beta)");
+    mvaddstr(1, 1, "AUIB Open Source Club");
     refresh();
 
-    int main_height = 20;
-    int main_width = 70;
+    int main_height = 30;
+    int main_width = 80;
     int main_center_y = (row - main_height) / 2;
     int main_center_x = (col - main_width) / 2;
-
-    int mini_height = 10;
-    int mini_width = 20;
-    int mini_centery = (row - mini_height) / 2;
-    int mini_centerx = (col - mini_width) / 2;
 
     PaddleParams paddle1;
     PaddleParams paddle2;
     WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "Pong!");
     refresh();
+    printASCII();
 
 
     paddle1.mainwin = mainwin;
@@ -313,20 +371,11 @@ int main() {
     spawnPaddle(&paddle1, TRUE, FALSE);
     spawnPaddle(&paddle2, TRUE, TRUE);
     checkScore(&score);
-    while (1) {
+    while (match_ongoing) {
         handle_input(kb);
-        //flushinp(); // Cuz the paddles keep LAGGING, DAMN!!!!!!!!!!!!!!!!!
-                    // Essentially, this flushes the input buffer for ncurses,
-                    //              getting the "inertia" effect
-                    //              (Flushing every frame sounds stupid,
-                    //              will think of a better solution later... TODO)
-                    //              ((Done))
-
-        // Collision check (paddles)
-
         if (key_w_pressed) { 
             if (paddle1.current_y == 1) {
-                ;
+                flushinp();
             } else {
                 --paddle1.current_y;
                 spawnPaddle(&paddle1, TRUE, FALSE);
@@ -335,7 +384,7 @@ int main() {
         }
         if (key_s_pressed) { 
             if (paddle1.current_y == paddle1.height - 5) {
-                ;
+                flushinp();
             } else {
                 ++paddle1.current_y;
                 spawnPaddle(&paddle1, FALSE, FALSE);
@@ -344,7 +393,7 @@ int main() {
         }
         if (key_up_pressed) { 
             if (paddle2.current_y == 1) {
-                ;
+                flushinp();
             } else {
                 --paddle2.current_y;
                 spawnPaddle(&paddle2, TRUE, TRUE);
@@ -353,7 +402,7 @@ int main() {
         }
         if (key_dn_pressed) { 
             if (paddle2.current_y == paddle2.height - 5) {
-                ;
+                flushinp();
             } else {
                 ++paddle2.current_y;
                 spawnPaddle(&paddle2, FALSE, TRUE);
@@ -364,6 +413,18 @@ int main() {
         usleep(30000);
         wrefresh(mainwin);
     }
+    delwin(mainwin);
+    clear();
+    werase(stdscr);
+    //wbkgd(stdscr, COLOR_PAIR(COLOR_BG_BLUE));
+    wrefresh(stdscr);
+    nodelay(stdscr, false);
+    winCondition(&score);
+    printASCII();
+
+    int ch;
+    while ((ch = getch()) != 10);
+    
     endwin();
     return EXIT_SUCCESS;
 }
