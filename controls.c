@@ -1,3 +1,6 @@
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/input.h>
 #include "controls.h"
 
 int key_w_pressed = 0;
@@ -10,7 +13,6 @@ void handle_input(int kb) {
     
     while (read(kb, &input, sizeof(struct input_event)) > 0) {
         if (input.type == EV_KEY) {
-            // input.value == 1 press, 0 release, 2 repeat
             int pressed = (input.value == 1 || input.value == 2);
             int released = (input.value == 0);
 

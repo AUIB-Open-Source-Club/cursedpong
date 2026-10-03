@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <locale.h>
+#include <fcntl.h>
+#include <stdio.h>
 #include "controls.h"
 
 #define COLOR_BG_BLUE       1
@@ -246,6 +248,12 @@ static void checkScore(ScoreParams* s){
 int main() {
     setlocale(LC_ALL, "en_US.UTF-8");
 
+    int kb = open("/dev/input/by-id/usb-Gaming_KB_Gaming_KB-event-kbd", O_RDONLY | O_NONBLOCK);
+    if (kb < 0){
+        perror("Error");
+        return EXIT_FAILURE;
+    }
+
     initscr();
     cbreak();
     noecho();
@@ -306,46 +314,52 @@ int main() {
     spawnPaddle(&paddle2, TRUE, TRUE);
     checkScore(&score);
     while (1) {
+        handle_input(kb);
         //flushinp(); // Cuz the paddles keep LAGGING, DAMN!!!!!!!!!!!!!!!!!
                     // Essentially, this flushes the input buffer for ncurses,
-                    //              getting rid of the "inertia" effect
+                    //              getting the "inertia" effect
                     //              (Flushing every frame sounds stupid,
                     //              will think of a better solution later... TODO)
                     //              ((Done))
 
         // Collision check (paddles)
-        if (paddle1.current_y == 1) {
-            if (key_w_pressed) continue; 
-        } else if (paddle1.current_y == paddle1.height - 5) {
-            if (key_s_pressed) continue;
-        }
-        if (paddle2.current_y == 1) {
-            if (key_up_pressed) continue;
-        } else if (paddle2.current_y == paddle2.height - 5) {
-            if (key_dn_pressed) continue;
-        }
-        if (key_up_pressed) { 
+
+        if (key_w_pressed) { 
+            if (paddle1.current_y == 1) {
+                ;
+            } else {
                 --paddle1.current_y;
                 spawnPaddle(&paddle1, TRUE, FALSE);
                 flushinp(); // 160 IQ move
-                break;
+            }
         }
-    //            ++paddle1.current_y;
-    //            spawnPaddle(&paddle1, FALSE, FALSE);
-    //            flushinp();
-    //            break;
-    //        case KEY_UP:
-    //            --paddle2.current_y;
-    //            spawnPaddle(&paddle2, TRUE, TRUE);
-    //            flushinp();
-    //            break;
-    //        case KEY_DOWN:
-    //            ++paddle2.current_y;
-    //            spawnPaddle(&paddle2, false, TRUE);
-    //            flushinp();
-    //            break;
-        
-        mvwprintw(stdscr, 0, 0, "Rate: %d", ball.bounceRate);
+        if (key_s_pressed) { 
+            if (paddle1.current_y == paddle1.height - 5) {
+                ;
+            } else {
+                ++paddle1.current_y;
+                spawnPaddle(&paddle1, FALSE, FALSE);
+                flushinp();
+            }
+        }
+        if (key_up_pressed) { 
+            if (paddle2.current_y == 1) {
+                ;
+            } else {
+                --paddle2.current_y;
+                spawnPaddle(&paddle2, TRUE, TRUE);
+                flushinp();
+            }
+        }
+        if (key_dn_pressed) { 
+            if (paddle2.current_y == paddle2.height - 5) {
+                ;
+            } else {
+                ++paddle2.current_y;
+                spawnPaddle(&paddle2, FALSE, TRUE);
+                flushinp();
+            }
+        }
         spawnBall(&ball, &paddle1, &paddle2, &score);
         usleep(30000);
         wrefresh(mainwin);
