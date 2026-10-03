@@ -197,15 +197,20 @@ static void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp, ScorePa
     }
 
     if (b->current_x == b->width-2 && b->xdirection == 1) {
-        mvwprintw(stdscr, LINES-1, 0, "Player 1 Scored");
+        mvwprintw(stdscr, LINES-1, 0, "V1 SCORED");
         b->current_x = b->width/2;
         b->current_y = b->height/2;
         b->xdirection *= -1;
         b->bounceRate = 4;
         s->p1score++;
+        if (s->p1score == 2) {
+            mvwprintw(lp->mainwin, lp->height - 1,
+                    (lp->width/2)-17,
+                    "YOU'RE NOT GETTING AWAY THIS TIME.");
+        }
         checkScore(s);
     } else if (b->current_x == 1 && b->xdirection == -1) {
-        mvwprintw(stdscr, LINES-1, 0, "Player 2 Scored");
+        mvwprintw(stdscr, LINES-1, 0, "V2 SCORED");
         b->current_x = b->width/2;
         b->current_y = b->height/2;
         b->xdirection *= -1;
@@ -226,14 +231,14 @@ static void checkScore(ScoreParams* s){
                                 mini_width,
                                 (LINES/2) + 17,
                                 ((COLS / 2) - mini_width) - 1, 
-                                "Player 1");
+                                "V1");
     wrefresh(p1);
     refresh();
     WINDOW* p2 = newWindow(mini_height,
                                 mini_width,
                                 (LINES/2) + 17,
                                 (COLS / 2) + 1, 
-                                "Player 2");
+                                "V2");
     wrefresh(p2);
     refresh();
 
@@ -242,16 +247,16 @@ static void checkScore(ScoreParams* s){
     y2 = getmaxy(p2);
 
     attron(COLOR_PAIR(COLOR_TEXT_BLUE));
-    mvwprintw(p1, y1/2, 1, "Score:   %d", s->p1score);
-    mvwprintw(p2, y2/2, 1, "Score:   %d", s->p2score);
+    mvwprintw(p1, y1/2, 1, "SCORE:   %d", s->p1score);
+    mvwprintw(p2, y2/2, 1, "SCORE:   %d", s->p2score);
     attroff(COLOR_PAIR(COLOR_TEXT_BLUE));
     wrefresh(p1);
     wrefresh(p2);
 
-    if (s->p1score == 10) {
+    if (s->p1score == 5) {
         winner = 1;
         match_ongoing = 0;
-    } else if (s->p2score == 10) {
+    } else if (s->p2score == 5) {
         winner = 2;
         match_ongoing = 0;
     }
@@ -261,29 +266,29 @@ static void checkScore(ScoreParams* s){
 
 void winCondition(ScoreParams* s){
     flushinp();
-    WINDOW* finalWin = newWindow(20, 40, (LINES - 20) / 2, (COLS - 40) / 2, "Game Over");
+    WINDOW* finalWin = newWindow(20, 40, (LINES - 20) / 2, (COLS - 40) / 2, "CLAIR 4-4");
 
     int y, x;
     getmaxyx(finalWin, y, x);
 
     int midy = (y / 2);
     int midx = (x / 2);
-    mvwprintw(finalWin, midy-5, midx - 6, "PLAYER %d WINS!", winner);
-    mvwprintw(finalWin, midy-4, midx - 6, "Well Played!");
-    mvwprintw(finalWin, midy, 5, "Player 1");
-    mvwprintw(finalWin, midy+1, 5, "Points: %d", s->p1score);
-    mvwprintw(finalWin, midy, midx + 5, "Player 2");
-    mvwprintw(finalWin, midy+1, midx + 5, "Points: %d", s->p2score);
-    mvwprintw(finalWin, midy+6, midx - 11, "Thank you for playing!");
-    mvwprintw(finalWin, y-2, midx - 10, "Press Enter to quit.");
-    mvwprintw(stdscr, 1, 1, "AUIB Open Source Club");
+    mvwprintw(finalWin, midy-5, midx - 6, "CLAIR DE SOLEIL");
+    mvwprintw(finalWin, midy-4, midx - 3, "P RANK");
+    mvwprintw(finalWin, midy, 5, "V1");
+    mvwprintw(finalWin, midy+1, 5, "POINTS: %d", s->p1score);
+    mvwprintw(finalWin, midy, midx + 5, "V2");
+    mvwprintw(finalWin, midy+1, midx + 5, "POINTS: %d", s->p2score);
+    mvwprintw(finalWin, midy+6, midx - 14, "TIME: S | KILLS: S | STYLE: S");
+    mvwprintw(finalWin, y-2, midx - 10, "PRESS \"ENTER\" TO QUIT.");
+    mvwprintw(stdscr, 1, 1, "SUPREME MACHINE");
     wrefresh(finalWin);
     delwin(finalWin);
 }
 
 void printASCII(){
-    WINDOW* asciiWin = newwin(5, COLS, 4, (COLS-44)/2);
-    wbkgd(asciiWin, COLOR_PAIR(COLOR_BG_BLUE));
+    WINDOW* asciiWin = newwin(5, COLS, 4, (COLS-57)/2);
+    wbkgd(asciiWin, COLOR_PAIR(COLOR_BG_RED));
     wrefresh(asciiWin);
     FILE* ascii;
     ssize_t read;
@@ -341,8 +346,8 @@ int main() {
     init_pair(COLOR_BORDER_DARK,    COLOR_BLACK, COLOR_WHITE);
     init_pair(COLOR_BORDER_LIGHT,   COLOR_WHITE, COLOR_WHITE);
 
-    bkgd(COLOR_PAIR(COLOR_BG_BLUE));
-    mvaddstr(1, 1, "AUIB Open Source Club");
+    bkgd(COLOR_PAIR(COLOR_BG_RED));
+    mvaddstr(1, 1, "SUPREME MACHINE");
     refresh();
 
     int main_height = 30;
@@ -352,7 +357,7 @@ int main() {
 
     PaddleParams paddle1;
     PaddleParams paddle2;
-    WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "Pong!");
+    WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "LAYER 4-4");
     refresh();
     printASCII();
 
@@ -409,6 +414,7 @@ int main() {
                 flushinp();
             }
         }
+
         spawnBall(&ball, &paddle1, &paddle2, &score);
         usleep(30000);
         wrefresh(mainwin);
