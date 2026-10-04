@@ -1,13 +1,6 @@
 #include <ncurses.h>
 #include <string.h>
-
-#define COLOR_BG_BLUE       1
-#define COLOR_DIALOG_GRAY   2
-#define COLOR_SHADOW_BLACK  3
-#define COLOR_TEXT_BLUE     4
-#define COLOR_BG_RED        5
-#define COLOR_BORDER_DARK   6
-#define COLOR_BORDER_LIGHT  7
+#include "window.h"
 
 WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
 
@@ -43,9 +36,34 @@ WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
     }
     attroff(COLOR_PAIR(3));
 
-    mvwprintw(win, 0, (x - strlen(label))/2, " %s ", label);
+    mvwprintw(win, 0, (x - strlen(label))/2, " %s", label);
 
     wrefresh(win);
     return win;
+}
+
+void printASCII(){
+    WINDOW* asciiWin = newwin(5, COLS, 4, (COLS-44)/2);
+    wbkgd(asciiWin, COLOR_PAIR(COLOR_BG_BLUE));
+    wrefresh(asciiWin);
+    FILE* ascii;
+    ssize_t read;
+    char* line = NULL;
+    size_t len;
+
+    ascii = fopen("./ascii.txt", "r");
+    if (!ascii) {
+        printf("ASCII file missing or failed to open.\n");
+        return;
+    }
+    while ((read = getline(&line, &len, ascii)) != -1){
+        move(10, COLS/2);
+        wprintw(asciiWin,"%s", line);
+        refresh();
+        wrefresh(asciiWin);
+    }
+    refresh();
+    wrefresh(stdscr);
+    fclose(ascii);
 }
 
