@@ -1,4 +1,3 @@
-#include <ncurses.h>
 #include <string.h>
 #include "window.h"
 

@@ -1,0 +1,293 @@
+#include <math.h>
+#include <fcntl.h>
+
+
+#include <ncurses.h>
+#include <unistd.h>
+
+#include "window.h"
+#include "game.h"
+#include "input.h"
+
+int match_ongoing = 1;
+int winner = 0;
+
+void init_paddle_params(PaddleParams* pr){
+    pr->height = getmaxy(pr->mainwin);
+    pr->width = getmaxx(pr->mainwin);
+    pr->current_y = pr->height/2;
+    pr->current_x = pr->width/2;
+    pr->ydirection = 0;
+}
+
+void init_ball_params(BallParams* pr){
+    pr->height = getmaxy(pr->mainwin);
+    pr->width = getmaxx(pr->mainwin);
+    pr->current_y = pr->height/2;
+    pr->current_x = pr->width/2;
+    pr->yfactor = 0;
+    pr->bounceRate = 4;
+    pr->xdirection = -1;
+    pr->ydirection = 1;
+}
+
+void checkScore(ScoreParams* s);
+
+void spawnPaddle(PaddleParams* p, bool flag, bool right){
+    int length = 4;
+    int pos;
+
+    if (right) {
+        pos = p->width-3;
+        p->current_x = pos - 1;
+    } else {
+        pos = 1;
+        p->current_x = 3;
+    }
+
+    //if (win->current_y == 0) {
+    //    win->current_y++;
+    //    return;
+    //}
+    //if (win->current_y == win->height - length) {
+    //    win->current_y--;
+    //    return;
+    //}
+
+    if (flag == TRUE) {
+        for (int i = 0; i < length; ++i) {
+            mvwprintw(p->mainwin, p->current_y+i, pos, "\xe2\x96\x88\xe2\x96\x88");
+            //if(win->current_y != win->height)
+            mvwprintw(p->mainwin, p->current_y+i+1, pos, "  ");
+            p->ydirection = -1;
+        }
+    } else {
+        for (int i = 0; i < length; ++i) {
+            mvwprintw(p->mainwin, p->current_y+i, pos, "\xe2\x96\x88\xe2\x96\x88");
+            //if(win->current_y != 1)
+            mvwprintw(p->mainwin, p->current_y-1, pos, "  ");
+            p->ydirection = 1;
+        }
+    }
+
+    wrefresh(p->mainwin);
+}
+
+void spawnBall(BallParams* b, PaddleParams* lp, PaddleParams* rp, ScoreParams* s){
+
+    mvwprintw(b->mainwin, b->current_y, b->current_x, " ");
+
+    b->yfactor += (double)b->ydirection / b->bounceRate;
+    int factor = (int)trunc(b->yfactor);
+    if (factor != 0) {
+        b->current_y += factor;
+        b->yfactor -= (double)factor;
+    }
+
+    b->current_x += b->xdirection;
+
+    if (b->current_y >= b->height-1) {
+        b->current_y = b->height - 2;
+        b->yfactor = 0;
+        b->ydirection = -1;
+        b->current_y += -1;
+    } else if (b->current_y <= 0) {
+        b->current_y = 1;
+        b->yfactor = 0;
+        b->ydirection = 1;
+        b->current_y += 1;
+    }
+
+    if (b->xdirection == -1 &&
+            (b->current_y >= lp->current_y && b->current_y < lp->current_y + 4)
+            && b->current_x == lp->current_x){
+        b->xdirection *= -1;
+        if (lp->ydirection == b->ydirection) {
+            if (b->bounceRate != 1) {
+                --b->bounceRate;
+            }
+        }
+        else {
+            ++b->bounceRate;
+        }
+    }
+
+    else if (b->xdirection == 1 &&
+            (b->current_y >= rp->current_y && b->current_y < rp->current_y + 4)
+            && b->current_x == rp->current_x){
+        b->xdirection *= -1;
+        if (rp->ydirection == b->ydirection) {
+            if (b->bounceRate != 1) {
+                --b->bounceRate;
+            }
+        }
+        else ++b->bounceRate;
+    }
+
+    if (b->current_x == b->width-2 && b->xdirection == 1) {
+        mvwprintw(stdscr, LINES-1, 0, "Player 1 Scored");
+        b->current_x = b->width/2;
+        b->current_y = b->height/2;
+        b->xdirection *= -1;
+        b->bounceRate = 4;
+        s->p1score++;
+        checkScore(s);
+    } else if (b->current_x == 1 && b->xdirection == -1) {
+        mvwprintw(stdscr, LINES-1, 0, "Player 2 Scored");
+        b->current_x = b->width/2;
+        b->current_y = b->height/2;
+        b->xdirection *= -1;
+        b->bounceRate = 4;
+        s->p2score++;
+        checkScore(s);
+    }
+
+    mvwprintw(b->mainwin, b->current_y, b->current_x, "\xe2\x97\x8f");
+
+    wrefresh(b->mainwin);
+}
+
+void checkScore(ScoreParams* s){
+    int mini_height = 5;
+    int mini_width = 20;
+    WINDOW* p1 = newWindow(mini_height,
+                                mini_width,
+                                (LINES/2) + 17,
+                                ((COLS / 2) - mini_width) - 1, 
+                                "Player 1");
+    wrefresh(p1);
+    refresh();
+    WINDOW* p2 = newWindow(mini_height,
+                                mini_width,
+                                (LINES/2) + 17,
+                                (COLS / 2) + 1, 
+                                "Player 2");
+    wrefresh(p2);
+    refresh();
+
+    int y1, y2;
+    y1 = getmaxy(p1);
+    y2 = getmaxy(p2);
+
+    attron(COLOR_PAIR(COLOR_TEXT_BLUE));
+    mvwprintw(p1, y1/2, 1, "Score:   %d", s->p1score);
+    mvwprintw(p2, y2/2, 1, "Score:   %d", s->p2score);
+    attroff(COLOR_PAIR(COLOR_TEXT_BLUE));
+    wrefresh(p1);
+    wrefresh(p2);
+
+    if (s->p1score == 10) {
+        winner = 1;
+        match_ongoing = 0;
+    } else if (s->p2score == 10) {
+        winner = 2;
+        match_ongoing = 0;
+    }
+    delwin(p1);
+    delwin(p2);
+}
+
+void winCondition(ScoreParams* s){
+    flushinp();
+    WINDOW* finalWin = newWindow(20, 40, (LINES - 20) / 2, (COLS - 40) / 2, "Game Over");
+
+    int y, x;
+    getmaxyx(finalWin, y, x);
+
+    int midy = (y / 2);
+    int midx = (x / 2);
+    mvwprintw(finalWin, midy-5, midx - 6, "PLAYER %d WINS!", winner);
+    mvwprintw(finalWin, midy-4, midx - 6, "Well Played!");
+    mvwprintw(finalWin, midy, 5, "Player 1");
+    mvwprintw(finalWin, midy+1, 5, "Points: %d", s->p1score);
+    mvwprintw(finalWin, midy, midx + 5, "Player 2");
+    mvwprintw(finalWin, midy+1, midx + 5, "Points: %d", s->p2score);
+    mvwprintw(finalWin, midy+6, midx - 11, "Thank you for playing!");
+    mvwprintw(finalWin, y-2, midx - 10, "Press Enter to quit.");
+    mvwprintw(stdscr, 1, 1, "AUIB Open Source Club");
+    wrefresh(finalWin);
+    delwin(finalWin);
+}
+
+void gameLoop(){
+    int kb = open("/dev/input/by-id/usb-Gaming_KB_Gaming_KB-event-kbd", O_RDONLY | O_NONBLOCK);
+    if (kb < 0){
+        perror("Error");
+        return;
+    }
+
+    int main_height = 25;
+    int main_width = 80;
+    int main_center_y = (LINES - main_height) / 2;
+    int main_center_x = (COLS - main_width) / 2;
+
+    PaddleParams paddle1;
+    PaddleParams paddle2;
+    WINDOW* mainwin = newWindow(main_height, main_width, main_center_y, main_center_x, "Pong!");
+    refresh();
+    printASCII();
+    paddle1.mainwin = mainwin;
+    paddle2.mainwin = mainwin;
+    init_paddle_params(&paddle1);
+    init_paddle_params(&paddle2);
+
+    BallParams ball;
+    ball.mainwin = mainwin;
+    init_ball_params(&ball);
+
+    ScoreParams score = {0, 0};
+
+    spawnPaddle(&paddle1, TRUE, FALSE);
+    spawnPaddle(&paddle2, TRUE, TRUE);
+    checkScore(&score);
+    while (match_ongoing) {
+        handle_input(kb);
+        if (key_w_pressed) { 
+            if (paddle1.current_y == 1) {
+                flushinp();
+            } else {
+                --paddle1.current_y;
+                spawnPaddle(&paddle1, TRUE, FALSE);
+                flushinp(); // 160 IQ move
+            }
+        }
+        if (key_s_pressed) { 
+            if (paddle1.current_y == paddle1.height - 5) {
+                flushinp();
+            } else {
+                ++paddle1.current_y;
+                spawnPaddle(&paddle1, FALSE, FALSE);
+                flushinp();
+            }
+        }
+        if (key_up_pressed) { 
+            if (paddle2.current_y == 1) {
+                flushinp();
+            } else {
+                --paddle2.current_y;
+                spawnPaddle(&paddle2, TRUE, TRUE);
+                flushinp();
+            }
+        }
+        if (key_dn_pressed) { 
+            if (paddle2.current_y == paddle2.height - 5) {
+                flushinp();
+            } else {
+                ++paddle2.current_y;
+                spawnPaddle(&paddle2, FALSE, TRUE);
+                flushinp();
+            }
+        }
+        spawnBall(&ball, &paddle1, &paddle2, &score);
+        usleep(30000);
+        wrefresh(mainwin);
+    }
+    delwin(mainwin);
+    clear();
+    werase(stdscr);
+    //wbkgd(stdscr, COLOR_PAIR(COLOR_BG_BLUE));
+    wrefresh(stdscr);
+    nodelay(stdscr, false);
+    winCondition(&score);
+    printASCII();
+}
