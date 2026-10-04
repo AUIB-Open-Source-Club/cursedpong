@@ -345,7 +345,7 @@ int main() {
     mvaddstr(1, 1, "AUIB Open Source Club");
     refresh();
 
-    int main_height = 30;
+    int main_height = 20;
     int main_width = 80;
     int main_center_y = (row - main_height) / 2;
     int main_center_x = (col - main_width) / 2;
