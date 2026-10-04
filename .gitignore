@@ -1,0 +1,4 @@
+src/*.o
+cursedpong
+bin/cursedpong
+build/
