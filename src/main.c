@@ -8,7 +8,9 @@
 #include <locale.h>
 #include <fcntl.h>
 #include <stdio.h>
+
 #include "input.h"
+#include "window.h"
 
 #define COLOR_BG_BLUE       1
 #define COLOR_DIALOG_GRAY   2
@@ -65,45 +67,6 @@ static void init_ball_params(BallParams* pr){
 static void checkScore(ScoreParams* s);
 
 // Now it's time to get funky.
-WINDOW* newWindow(int height, int width, int starty, int startx, char* label){
-
-    WINDOW* win = newwin(height, width, starty, startx);
-    wbkgd(win, COLOR_PAIR(COLOR_DIALOG_GRAY));
-
-    int y, x;
-    getmaxyx(win, y, x);
-
-    // Custom 3D box thingy idk
-    wattron(win, COLOR_PAIR(COLOR_BORDER_LIGHT) | A_BOLD);
-    mvwaddch(win, 0, 0, ACS_ULCORNER);
-    mvwaddch(win, y - 1, 0, ACS_LLCORNER);
-    mvwhline(win, 0, 1, ACS_HLINE, x-2);
-    mvwvline(win, 1, 0, ACS_VLINE, y-2);
-    wattroff(win, COLOR_PAIR(COLOR_BORDER_LIGHT | A_BOLD));
-
-    wattrset(win, A_NORMAL);
-
-    wattron(win, COLOR_PAIR(COLOR_BORDER_DARK) | A_BOLD);
-    mvwaddch(win, 0, x-1, ACS_URCORNER);
-    mvwaddch(win, y - 1, x-1, ACS_LRCORNER);
-    mvwhline(win, y-1, 1, ACS_HLINE, x-2);
-    mvwvline(win, 1, x-1, ACS_VLINE, y-2);
-    wattroff(win, COLOR_PAIR(COLOR_BORDER_DARK) | A_BOLD);
-
-    attron(COLOR_PAIR(3));
-    for (int i = 1; i < height+1; ++i) {
-        mvprintw(i+starty, width+startx, " "); 
-    }
-    for (int j = 1; j < width+1; ++j) {
-        mvprintw(height+starty, j+startx, " "); 
-    }
-    attroff(COLOR_PAIR(3));
-
-    mvwprintw(win, 0, (x - strlen(label))/2, " %s ", label);
-
-    wrefresh(win);
-    return win;
-}
 
 static void spawnPaddle(PaddleParams* p, bool flag, bool right){
     int length = 4;
@@ -345,7 +308,7 @@ int main() {
     mvaddstr(1, 1, "AUIB Open Source Club");
     refresh();
 
-    int main_height = 20;
+    int main_height = 25;
     int main_width = 80;
     int main_center_y = (row - main_height) / 2;
     int main_center_x = (col - main_width) / 2;
