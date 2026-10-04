@@ -8,7 +8,7 @@
 #include <locale.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include "controls.h"
+#include "input.h"
 
 #define COLOR_BG_BLUE       1
 #define COLOR_DIALOG_GRAY   2
