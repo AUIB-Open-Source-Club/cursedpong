@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -Wall -pedantic-errors -lncursesw -lm
-SOURCES := $(wildcard *.c)
+SOURCES := $(wildcard src/*.c)
 OBJECTS := $(SOURCES:.c=.o)
 TARGET = cursedpong
 INCLUDES = 

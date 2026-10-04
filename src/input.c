@@ -1,7 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <linux/input.h>
-#include "controls.h"
+#include "input.h"
 
 int key_w_pressed = 0;
 int key_s_pressed = 0;
