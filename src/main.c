@@ -12,12 +12,6 @@
 int main(int argc, char* argv[]) {
     setlocale(LC_ALL, "en_US.UTF-8");
 
-    int kb = open("/dev/input/by-id/usb-Gaming_KB_Gaming_KB-event-kbd", O_RDONLY | O_NONBLOCK);
-    if (kb < 0){
-        perror("Error");
-        return EXIT_FAILURE;
-    }
-
     initscr();
     cbreak();
     noecho();
@@ -56,7 +50,6 @@ int main(int argc, char* argv[]) {
 
     int ch;
     while ((ch = getch()) != 10);
-    mvwprintw(stdscr, 0, 0, "Lmao");
     
     endwin();
     return EXIT_SUCCESS;
